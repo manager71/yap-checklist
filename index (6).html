@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YAP Maintenance Checklist</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e2e0d8;
+    --text: #1a1a18;
+    --muted: #7a7870;
+    --green: #2d6a4f;
+    --green-bg: #d8f3dc;
+    --red: #9b2226;
+    --red-bg: #fde8e8;
+    --amber: #7d4e00;
+    --amber-bg: #fef3cd;
+    --blue: #1a4a7a;
+    --blue-bg: #dbeafe;
+    --accent: #2d6a4f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--text);
+    color: #fff;
+    padding: 20px 24px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+  header p { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .sync-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.12); border-radius: 99px;
+    padding: 4px 10px; font-size: 11px; white-space: nowrap;
+  }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #888; flex-shrink: 0; }
+  .sync-dot.live { background: #52b788; }
+  .sync-dot.saving { background: #f4a261; animation: pulse 1s infinite; }
+  .sync-dot.err { background: #e76f51; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .progress-wrap { margin-top: 12px; }
+  .progress-bar { height: 4px; background: rgba(255,255,255,0.15); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #52b788; border-radius: 99px; transition: width 0.5s ease; }
+  .progress-label { font-size: 11px; opacity: 0.6; margin-top: 5px; }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 8px;
+    padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .stat { text-align: center; padding: 8px 4px; }
+  .stat-num { font-size: 22px; font-weight: 600; font-family: 'DM Mono', monospace; }
+  .stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 1px; }
+  .s-green { color: var(--green); }
+  .s-red { color: var(--red); }
+  .s-amber { color: var(--amber); }
+  .s-muted { color: var(--muted); }
+
+  .tabs-wrap { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; display: flex; gap: 0; }
+  .tab {
+    padding: 12px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+    border: none; background: none; color: var(--muted); white-space: nowrap;
+    border-bottom: 2px solid transparent; transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  .content { padding: 16px; max-width: 760px; margin: 0 auto; }
+
+  .section { margin-bottom: 20px; }
+  .section-title {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px;
+    padding: 0 4px;
+  }
+
+  .item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; margin-bottom: 6px; overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .item.done { border-color: #52b788; }
+  .item.flagged { border-color: #e76f51; }
+  .item.pending { border-color: #f4a261; }
+  .item-main { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .item-label { font-size: 14px; flex: 1; line-height: 1.4; }
+
+  .btn-group { display: flex; gap: 4px; flex-shrink: 0; }
+  .sbtn {
+    padding: 5px 11px; border-radius: 99px; border: 1px solid var(--border);
+    font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    cursor: pointer; background: var(--bg); color: var(--muted);
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .sbtn:hover { border-color: #aaa; color: var(--text); }
+  .sbtn.yes { background: var(--green-bg); color: var(--green); border-color: #52b788; }
+  .sbtn.no { background: var(--red-bg); color: var(--red); border-color: #e76f51; }
+  .sbtn.other { background: var(--amber-bg); color: var(--amber); border-color: #f4a261; }
+
+  .item-detail {
+    border-top: 1px solid var(--border); padding: 12px 14px;
+    background: #fafaf8; display: flex; flex-direction: column; gap: 10px;
+  }
+  .detail-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .detail-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  select, textarea {
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 7px;
+    background: var(--surface); color: var(--text); outline: none;
+    transition: border-color 0.15s;
+  }
+  select { padding: 5px 10px; }
+  select:focus { border-color: var(--accent); }
+  textarea { width: 100%; padding: 8px 10px; resize: vertical; min-height: 64px; line-height: 1.5; }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: #bbb; }
+
+  .photo-section { display: flex; flex-direction: column; gap: 8px; }
+  .photo-upload-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 7px; border: 1.5px dashed var(--border);
+    font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    cursor: pointer; background: var(--surface); color: var(--muted);
+    transition: all 0.15s; width: fit-content;
+  }
+  .photo-upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .thumb {
+    width: 68px; height: 68px; object-fit: cover;
+    border-radius: 8px; border: 1px solid var(--border);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .thumb:hover { transform: scale(1.05); }
+
+  .refresh-btn {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; border-radius: 7px; padding: 5px 12px; font-size: 12px;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+  .loading { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
+  .spinner {
+    width: 24px; height: 24px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; padding: 10px 20px; border-radius: 99px;
+    font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 520px) {
+    .btn-group { flex-direction: column; }
+    .sbtn { font-size: 11px; padding: 4px 8px; }
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <h1>Yellowstone Asset Properties</h1>
+      <p>Maintenance Checklist 2026</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+      <div class="sync-pill">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-txt">Connecting...</span>
+      </div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-lbl">Loading...</div>
+  </div>
+</header>
+
+<div class="stats-row">
+  <div class="stat"><div class="stat-num s-green" id="cnt-yes">—</div><div class="stat-lbl">Done</div></div>
+  <div class="stat"><div class="stat-num s-red" id="cnt-no">—</div><div class="stat-lbl">Issues</div></div>
+  <div class="stat"><div class="stat-num s-amber" id="cnt-other">—</div><div class="stat-lbl">Pending</div></div>
+  <div class="stat"><div class="stat-num s-muted" id="cnt-blank">—</div><div class="stat-lbl">Untouched</div></div>
+</div>
+
+<div class="tabs-wrap" id="tabs"></div>
+<div class="content" id="body"><div class="loading"><div class="spinner"></div>Loading shared data...</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbx33VwzGGLytfRts844p01R_r4EpFdQ-e-BIY7pAbbUTWIRVSqy4Aqd6eWQItP1MGP2/exec";
+
+const SECTIONS = [
+  {tab:"Master Checklist",label:"Exterior Repairs & Cleaning",items:["Inspect all properties for holes and cracks; repair as needed","Tighten or remove loose cables","Pressure wash buildings with mold/algae","Pressure wash Sealy property"]},
+  {tab:"Master Checklist",label:"Lighting, Security & Laundry",items:["Ensure all exterior lights are installed and eliminate dark spots","Install cameras and motion detectors","Replace broken locks in Kings Haven laundry rooms"]},
+  {tab:"Master Checklist",label:"Mural Lighting",items:["Install lighting for all murals (solar or hardwired)","Ensure murals are well-lit and visually appealing at night"]},
+  {tab:"Master Checklist",label:"FQ Property Improvements",items:["Install new exterior tenant lights","Replace old mailboxes with new ones (similar to Kings Haven)","Create seating areas (2–3 benches per building + tables)","Train Juan to assemble/install benches","Install decorative moon lighting feature","Complete landscaping installation","Upgrade landscaping across all properties","Standardize landscaping design (start with Sealy)"]},
+  {tab:"Master Checklist",label:"Project & Operations",items:["Prepare for Royal Oaks closing (May 25)","Achieve 100% occupancy by end of month","Coordinate with Jenny for additional team support","Assign extra team to painting and priority tasks"]},
+  {tab:"Kings Haven North",label:"Jesse — Systems & Compliance",items:["Smoke detectors operational","Carbon monoxide detectors operational","Fire extinguishers inspected","Fire alarm tested","Panels labeled","GFCI outlets","Water heaters strapped","TPR extensions"]},
+  {tab:"Kings Haven North",label:"Jory — Site & Grounds",items:["Potholes addressed","Parking/ADA striping","Trees clear","Fences/gates good repair"]},
+  {tab:"Kings Haven North",label:"Juan — Repairs",items:["Mold/mildew addressed","Trash removed","Corridors clear/lit","Grills removed","Closets cleared","Trip hazards fixed","Railings secured","Downspouts attached","Windows replaced","Peeling paint fixed","Exterior mildew cleaned","Amenities operational"]},
+  {tab:"Kings Haven South",label:"Jesse — Systems & Compliance",items:["Smoke detectors operational","Carbon monoxide detectors operational (REQUIRED)","Fire extinguishers inspected","Gas appliances visually inspected","No visible gas leaks","Clearance around gas equipment","Fire alarm tested","Panels labeled","GFCI outlets","Water heaters strapped","TPR extensions"]},
+  {tab:"Kings Haven South",label:"Jory — Site & Grounds",items:["Potholes addressed","Parking/ADA striping","Trees clear","Fences/gates good repair"]},
+  {tab:"Kings Haven South",label:"Juan — Repairs",items:["Mold/mildew addressed","Trash removed","Corridors clear/lit","Grills removed","Closets cleared","Trip hazards fixed","Railings secured","Downspouts attached","Windows replaced","Peeling paint fixed","Exterior mildew cleaned","Amenities operational"]},
+  {tab:"8-Day Schedule",label:"Day 1 — Exterior Inspection & Repairs",items:["Inspect all properties for holes and cracks","Begin repairs on major damage areas","Identify and tag all loose cables","Tighten/remove loose cables"]},
+  {tab:"8-Day Schedule",label:"Day 2 — Pressure Washing & Cleaning",items:["Pressure wash buildings with mold/algae","Focus on heavy areas first","Pressure wash Sealy property"]},
+  {tab:"8-Day Schedule",label:"Day 3 — Lighting & Dark Spot Elimination",items:["Inspect all exterior lighting","Install/replace lights to eliminate dark spots","Verify full nighttime coverage"]},
+  {tab:"8-Day Schedule",label:"Day 4 — Security & Laundry Rooms",items:["Install cameras","Install motion detectors","Replace broken locks (Kings Haven laundry rooms)"]},
+  {tab:"8-Day Schedule",label:"Day 5 — Mural & Aesthetic Lighting",items:["Install lighting for all murals","Test solar/hardwired options","Ensure murals are well-lit at night"]},
+  {tab:"8-Day Schedule",label:"Day 6 — FQ Upgrades Part 1",items:["Install new exterior tenant lights","Remove old mailboxes","Install new mailboxes","Begin bench assembly (train Juan)"]},
+  {tab:"8-Day Schedule",label:"Day 7 — FQ Upgrades Part 2 & Landscaping",items:["Install benches and seating areas","Install decorative moon lighting","Begin landscaping at Sealy"]},
+  {tab:"8-Day Schedule",label:"Day 8 — Landscaping, Final Walk & Operations",items:["Complete landscaping upgrades","Standardize landscaping approach","Final walkthrough all properties","Address remaining punch list items","Coordinate extra support if needed","Push toward 100% occupancy","Prepare for Royal Oaks closing"]}
+];
+
+const TEAM = ["Unassigned","Jesse","Jory","Juan","Jenny","Other"];
+const TABS = [...new Set(SECTIONS.map(s=>s.tab))];
+let state = {};
+let activeTab = TABS[0];
+let saveTimers = {};
+
+function k(si,ii){ return si+'-'+ii; }
+
+function syncStatus(type, msg){
+  document.getElementById('sync-dot').className = 'sync-dot ' + type;
+  document.getElementById('sync-txt').textContent = msg;
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+async function loadAll(){
+  syncStatus('saving','Syncing...');
+  try {
+    const r = await fetch(API+'?action=loadAll&t='+Date.now());
+    const data = await r.json();
+    state = {};
+    Object.keys(data).forEach(key => {
+      const d = data[key];
+      state[key] = {
+        status: d.status||'',
+        note: d.note||'',
+        assignee: d.assignee||'Unassigned',
+        photos: Array.isArray(d.photos)?d.photos:(d.photos?d.photos.split('||').filter(Boolean):[])
+      };
+    });
+    syncStatus('live','Live — Google Sheets connected');
+    renderTabs(); renderBody(); updateProgress();
+  } catch(e) {
+    syncStatus('err','Connection error');
+    renderTabs(); renderBody(); updateProgress();
+  }
+}
+
+async function pushItem(si, ii){
+  const d = state[k(si,ii)]||{};
+  syncStatus('saving','Saving...');
+  try {
+    await fetch(API, {
+      method:'POST',
+      body: JSON.stringify({
+        action:'save', key:k(si,ii),
+        status: d.status||'', note: d.note||'',
+        assignee: d.assignee||'Unassigned',
+        photos: (d.photos||[]).join('||')
+      })
+    });
+    syncStatus('live','Saved ✓');
+    showToast('Saved to Google Sheets ✓');
+  } catch(e) {
+    syncStatus('err','Save failed');
+  }
+}
+
+function updateProgress(){
+  let total=0,yes=0,no=0,other=0,blank=0;
+  SECTIONS.forEach((s,si)=>{
+    s.items.forEach((_,ii)=>{
+      total++;
+      const v=(state[k(si,ii)]||{}).status||'';
+      if(v==='yes')yes++;
+      else if(v==='no')no++;
+      else if(v==='other')other++;
+      else blank++;
+    });
+  });
+  const pct = total ? Math.round(yes/total*100) : 0;
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-lbl').textContent = yes+' of '+total+' items completed ('+pct+'%)';
+  document.getElementById('cnt-yes').textContent = yes;
+  document.getElementById('cnt-no').textContent = no;
+  document.getElementById('cnt-other').textContent = other;
+  document.getElementById('cnt-blank').textContent = blank;
+}
+
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = TABS.map(t=>
+    `<button class="tab${t===activeTab?' active':''}" onclick="switchTab(${JSON.stringify(t)})">${t}</button>`
+  ).join('');
+}
+
+function switchTab(t){ activeTab=t; renderTabs(); renderBody(); }
+
+function renderBody(){
+  const secs = SECTIONS.map((s,si)=>({...s,si})).filter(s=>s.tab===activeTab);
+  document.getElementById('body').innerHTML = secs.map(({label,items,si})=>`
+    <div class="section">
+      <div class="section-title">${label}</div>
+      ${items.map((item,ii)=>renderItem(si,ii,item)).join('')}
+    </div>
+  `).join('');
+}
+
+function renderItem(si,ii,label){
+  const d = state[k(si,ii)]||{};
+  const st = d.status||'';
+  const cls = st==='yes'?'done':st==='no'?'flagged':st==='other'?'pending':'';
+  const photos = (d.photos||[]).map((p,pi)=>
+    `<img class="thumb" src="${p}" onclick="viewPhoto('${k(si,ii)}',${pi})" title="View photo">`
+  ).join('');
+  return `<div class="item ${cls}" id="item-${si}-${ii}">
+    <div class="item-main">
+      <div class="item-label">${label}</div>
+      <div class="btn-group">
+        <button class="sbtn${st==='yes'?' yes':''}" onclick="setStatus(${si},${ii},'yes')">✓ Yes</button>
+        <button class="sbtn${st==='no'?' no':''}" onclick="setStatus(${si},${ii},'no')">✗ No</button>
+        <button class="sbtn${st==='other'?' other':''}" onclick="setStatus(${si},${ii},'other')">~ Other</button>
+      </div>
+    </div>
+    ${st?`<div class="item-detail">
+      <div class="detail-row">
+        <span class="detail-label">Assigned to:</span>
+        <select onchange="setField(${si},${ii},'assignee',this.value)">
+          ${TEAM.map(t=>`<option${(d.assignee||'Unassigned')===t?' selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <div class="detail-label" style="margin-bottom:5px">Notes / Explanation</div>
+        <textarea placeholder="Describe the issue, action taken, or any details..." onblur="setField(${si},${ii},'note',this.value)">${d.note||''}</textarea>
+      </div>
+      <div class="photo-section">
+        <div class="detail-label">Photo proof</div>
+        <label class="photo-upload-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Add photo(s)
+          <input type="file" accept="image/*" multiple style="display:none" onchange="addPhotos(${si},${ii},this)">
+        </label>
+        <div class="thumbs">${photos}</div>
+      </div>
+    </div>`:''}
+  </div>`;
+}
+
+function setStatus(si,ii,val){
+  if(!state[k(si,ii)])state[k(si,ii)]={};
+  state[k(si,ii)].status = state[k(si,ii)].status===val?'':val;
+  updateProgress();
+  document.getElementById(`item-${si}-${ii}`).outerHTML = renderItem(si,ii,SECTIONS[si].items[ii]);
+  pushItem(si,ii);
+}
+
+function setField(si,ii,field,val){
+  if(!state[k(si,ii)])state[k(si,ii)]={};
+  state[k(si,ii)][field]=val;
+  clearTimeout(saveTimers[k(si,ii)]);
+  saveTimers[k(si,ii)]=setTimeout(()=>pushItem(si,ii),1000);
+}
+
+function addPhotos(si,ii,input){
+  const files=Array.from(input.files);
+  if(!state[k(si,ii)])state[k(si,ii)]={};
+  if(!state[k(si,ii)].photos)state[k(si,ii)].photos=[];
+  let loaded=0;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      state[k(si,ii)].photos.push(e.target.result);
+      loaded++;
+      if(loaded===files.length){
+        document.getElementById(`item-${si}-${ii}`).outerHTML=renderItem(si,ii,SECTIONS[si].items[ii]);
+        pushItem(si,ii);
+      }
+    };
+    r.readAsDataURL(f);
+  });
+}
+
+function viewPhoto(key,pi){
+  const src=(state[key]||{}).photos[pi];
+  if(src){ const w=window.open('','_blank'); w.document.write(`<img src="${src}" style="max-width:100%;height:auto">`); }
+}
+
+loadAll();
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>
